@@ -6,9 +6,10 @@ import bcrypt from "bcrypt";
 import Joi from "joi";
 import { stripHtml } from "string-strip-html";
 import { v4 as uuid } from 'uuid';
+import dayjs from "dayjs";
+import { postCadastro, postLogin } from "./controllers/usuarios.controller.js";
 
 const app = express();
-
 
 app.use(cors());
 app.use(express.json());
@@ -23,18 +24,27 @@ try {
     (err) => console.log(err.message);
 }
 
-const db = mongoClient.db();
+export const db = mongoClient.db();
 
-app.post("/cadastro", async (req, res) => {
+app.post("/cadastro", postCadastro );
 
-    const { name, email, password } = req.body;
+app.post("/", postLogin);
 
+app.post("/nova-transacao/:tipo", async (req, res) => {
 
+    const { tipo } = req.params;
+
+    const { authorization } = req.headers;
+
+    const token = authorization?.replace("Bearer ", "");
+
+    if (!token) return res.sendStatus(401);
+
+    const { valor, description } = req.body;
 
     const schemaUsuario = Joi.object({
-        name: Joi.string().required(),
-        email: Joi.string().email().required(),
-        password: Joi.string().min(3).required()
+        valor: Joi.number().positive().required(),
+        description: Joi.string().required()
     })
 
     const validation = schemaUsuario.validate(req.body, { abortEarly: false });
@@ -44,62 +54,24 @@ app.post("/cadastro", async (req, res) => {
         return res.status(422).send(errors);
     }
 
-    const sanitizedName = stripHtml(name).result.trim();
-    const sanitizedEmail = stripHtml(email).result.trim();
-    const sanitizedPassword = stripHtml(password).result.trim();
-    
+    const sanitizedValor = stripHtml(valor).result.trim();
+    const sanitizedDescription = stripHtml(description).result.trim();
+
 
     try {
-        const usuario = await db.collection("usuariosCadastrados").findOne({ email: sanitizedEmail });
-        if (usuario) return res.status(409).send("Esse usuário já existe!");
+        const sessao = await db.collection("login").findOne({ token });
+        if (!sessao) return res.sendStatus(401);
 
-        const hash = bcrypt.hashSync(sanitizedPassword, 10);
+        const hoje = dayjs();
+        const dataFormatada = hoje.format('DD/MM');
 
-        await db.collection("usuariosCadastrados").insertOne({ name: sanitizedName, email: sanitizedEmail, password: hash });
+        await db.collection("transacoes").insertOne({ valor: sanitizedValor, description: sanitizedDescription, data: dataFormatada, tipo: tipo, idUsuario: sessao.idUsuario });
 
         res.sendStatus(201);
 
     } catch (err) {
         res.status(500).send(err.message);
     }
-
-})
-
-app.post("/", async (req, res) => {
-
-	const { email, password } = req.body;
-
-    const schemaUsuario = Joi.object({
-        email: Joi.string().email().required(),
-        password: Joi.string().min(3).required()
-    })
-
-    const validation = schemaUsuario.validate(req.body, { abortEarly: false });
-
-    if (validation.error) {
-        const errors = validation.error.details.map(detail => detail.message);
-        return res.status(422).send(errors);
-    }
-
-    const sanitizedEmail = stripHtml(email).result.trim();
-    const sanitizedPassword = stripHtml(password).result.trim();
-    
-
-	try {
-		const usuario = await db.collection("usuariosCadastrados").findOne({ email: sanitizedEmail });
-		if (!usuario) return res.status(404).send("Usuário não cadastrado");
-
-		const senhaEstaCorreta = bcrypt.compareSync(sanitizedPassword, usuario.password);
-		if (!senhaEstaCorreta) return res.status(401).send("Senha incorreta");
-
-		const token = uuid();
-		await db.collection("login").insertOne({ token, idUsuario: usuario._id });
-
-        return res.status(200).send(token);
-
-	} catch (err) {
-		res.status(500).send(err.message)
-	}
 })
 
 
