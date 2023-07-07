@@ -93,11 +93,11 @@ app.get("/home", async (req, res) => {
         const listaTransacoes = await db.collection("transacoes").find().toArray();
         res.send(listaTransacoes);
     } catch (err) {
-        res.status(500).send(err.message)
+        res.status(500).send(err.message);
     }
 })
 
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`O servidor está rodando na porta ${PORT}!`))
+const port = process.env.PORT || 5000;
+app.listen(port, () => console.log(`O servidor está rodando na porta ${port}!`));
 
