@@ -89,8 +89,12 @@ app.get("/home", async (req, res) => {
 
 
     try {
+
+        const sessao = await db.collection("login").findOne({ token });
+        console.log(sessao.idUsuario);
+        const listaTransacoes = await db.collection("transacoes").find({idUsuario: sessao.idUsuario}).toArray();
+        console.log(listaTransacoes)
         
-        const listaTransacoes = await db.collection("transacoes").find().toArray();
         res.send(listaTransacoes);
     } catch (err) {
         res.status(500).send(err.message);

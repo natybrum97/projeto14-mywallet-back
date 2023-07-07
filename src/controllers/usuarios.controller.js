@@ -77,6 +77,5 @@ export async function postLogin (req, res) {
 
     } catch (err) {
         res.status(500).send(err.message);
-        console.log(err);
     }
 }
