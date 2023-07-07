@@ -35,8 +35,10 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
     const { tipo } = req.params;
 
     const { authorization } = req.headers;
+    console.log(authorization)
 
     const token = authorization?.replace("Bearer ", "");
+    
 
     if (!token) return res.sendStatus(401);
 
@@ -71,6 +73,27 @@ app.post("/nova-transacao/:tipo", async (req, res) => {
 
     } catch (err) {
         res.status(500).send(err.message);
+    }
+})
+
+app.get("/home", async (req, res) => {
+
+    const { authorization } = req.headers;
+
+    console.log(authorization)
+
+    const token = authorization?.replace("Bearer ", "");
+    
+
+    if (!token) return res.sendStatus(401);
+
+
+    try {
+        
+        const listaTransacoes = await db.collection("transacoes").find().toArray();
+        res.send(listaTransacoes);
+    } catch (err) {
+        res.status(500).send(err.message)
     }
 })
 
