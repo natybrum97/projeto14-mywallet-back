@@ -101,6 +101,28 @@ app.get("/home", async (req, res) => {
     }
 })
 
+app.delete("/home/:id", async (req, res) => {
+
+	const { id } = req.params;
+
+    const { authorization } = req.headers;
+
+    console.log(authorization);
+
+    const token = authorization?.replace("Bearer ", "");
+    
+
+    if (!token) return res.sendStatus(401);
+
+	try {
+		const result = await db.collection("transacoes").deleteOne({ _id: new ObjectId(id) })
+		if (result.deletedCount === 0) return res.status(404).send("Essa transação não existe!");
+		res.status(204).send("Receita deletada com sucesso!");
+	} catch (err) {
+		res.status(500).send(err.message);
+	}
+})
+
 
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`O servidor está rodando na porta ${port}!`));
