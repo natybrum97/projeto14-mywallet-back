@@ -101,6 +101,30 @@ app.get("/home", async (req, res) => {
     }
 })
 
+app.get("/transacao/:id", async (req, res) => {
+
+    const { id } = req.params;
+
+    const { authorization } = req.headers;
+
+    console.log(authorization)
+
+    const token = authorization?.replace("Bearer ", "");
+    
+
+    if (!token) return res.sendStatus(401);
+
+
+    try {
+
+        const atualizar = await db.collection("transacoes").findOne({ _id: new ObjectId(id) });
+        if (!atualizar) return res.status(404).send("Essa transação não existe!");
+        res.send(atualizar);
+    } catch (err) {
+        res.status(500).send(err.message);
+    }
+})
+
 app.delete("/home/:id", async (req, res) => {
 
 	const { id } = req.params;
@@ -118,6 +142,49 @@ app.delete("/home/:id", async (req, res) => {
 		const result = await db.collection("transacoes").deleteOne({ _id: new ObjectId(id) })
 		if (result.deletedCount === 0) return res.status(404).send("Essa transação não existe!");
 		res.status(204).send("Receita deletada com sucesso!");
+	} catch (err) {
+		res.status(500).send(err.message);
+	}
+})
+
+app.put("/editar-registro/:tipo/:id", async (req, res) => {
+
+    const { tipo, id } = req.params;
+
+    const { authorization } = req.headers;
+
+    console.log(authorization);
+
+    const token = authorization?.replace("Bearer ", "");
+    
+    if (!token) return res.sendStatus(401);
+
+	const { valor, description } = req.body;
+
+    const schemaUsuario = Joi.object({
+        valor: Joi.number().positive().required(),
+        description: Joi.string().required()
+    })
+
+    const validation = schemaUsuario.validate(req.body, { abortEarly: false });
+
+    if (validation.error) {
+        const errors = validation.error.details.map(detail => detail.message);
+        return res.status(422).send(errors);
+    }
+
+    const sanitizedValor = stripHtml(valor).result.trim();
+    const sanitizedDescription = stripHtml(description).result.trim();
+
+	try {
+		const result = await db.collection('transacoes').updateOne(
+			{ _id: new ObjectId(id) },
+			{ $set: { valor: sanitizedValor, description: sanitizedDescription } }
+		)
+		if (result.matchedCount === 0) return res.status(404).send("Essa transação não existe!");
+
+		res.send("Transação atualizada!");
+
 	} catch (err) {
 		res.status(500).send(err.message);
 	}
