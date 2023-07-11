@@ -1,20 +1,15 @@
-import Joi from "joi";
 import { stripHtml } from "string-strip-html";
-import { db } from "../app.js";
+import { db } from "../database/database.connection.js"
 import bcrypt from "bcrypt";
 import { v4 as uuid } from 'uuid';
+import { schemaCadastro } from "../schemas/usuarios.schemas.js";
+import { schemaLogin } from "../schemas/usuarios.schemas.js";
 
 export async function postCadastro (req, res) {
 
     const { name, email, password } = req.body;
 
-    const schemaUsuario = Joi.object({
-        name: Joi.string().required(),
-        email: Joi.string().email().required(),
-        password: Joi.string().min(3).required()
-    })
-
-    const validation = schemaUsuario.validate(req.body, { abortEarly: false });
+    const validation = schemaCadastro.validate(req.body, { abortEarly: false });
 
     if (validation.error) {
         const errors = validation.error.details.map(detail => detail.message);
@@ -46,12 +41,7 @@ export async function postLogin (req, res) {
 
     const { email, password } = req.body;
 
-    const schemaUsuario = Joi.object({
-        email: Joi.string().email().required(),
-        password: Joi.string().min(3).required()
-    })
-
-    const validation = schemaUsuario.validate(req.body, { abortEarly: false });
+    const validation = schemaLogin.validate(req.body, { abortEarly: false });
 
     if (validation.error) {
         const errors = validation.error.details.map(detail => detail.message);
